@@ -1,0 +1,60 @@
+name: Android - APK de diagnostico Meta
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/android-diagnostico.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-debug-apk:
+    name: Compilar CameraAccess oficial (modo desenvolvedor)
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Preparar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Preparar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Instalar SDK Android 36
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Baixar app de exemplo oficial da Meta
+        run: |
+          git clone --depth 1 https://github.com/facebook/meta-wearables-dat-android.git meta-official
+          echo "Meta DAT source SHA: $(git -C meta-official rev-parse HEAD)"
+
+      - name: Configurar Developer Mode (sem credenciais privadas)
+        working-directory: meta-official/samples/CameraAccess
+        run: |
+          printf 'mwdat_application_id=0\nmwdat_client_token=0\n' > local.properties
+          chmod +x gradlew
+
+      - name: Compilar APK debug
+        working-directory: meta-official/samples/CameraAccess
+        run: ./gradlew --no-daemon --stacktrace :app:assembleDebug
+
+      - name: Preparar APK
+        run: |
+          mkdir -p dist
+          cp meta-official/samples/CameraAccess/app/build/outputs/apk/debug/app-debug.apk dist/MetaGlasses-Diagnostico.apk
+          sha256sum dist/MetaGlasses-Diagnostico.apk
+
+      - name: Publicar APK para download privado
+        uses: actions/upload-artifact@v4
+        with:
+          name: Meta-Glasses-Diagnostico-APK
+          path: dist/MetaGlasses-Diagnostico.apk
+          if-no-files-found: error
+          retention-days: 7
