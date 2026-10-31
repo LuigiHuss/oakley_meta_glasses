@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/android-diagnostico.yml"
+      - "scripts/optimize_cameraaccess.py"
 
 permissions:
   contents: read
