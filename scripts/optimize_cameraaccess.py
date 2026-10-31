@@ -24,6 +24,7 @@ source = root / "app/src/main/java/com/meta/wearable/dat/externalsampleapps/came
 vm = source / "camera/CameraViewModel.kt"
 ui = source / "camera/CameraUiState.kt"
 gradle = root / "app/build.gradle.kts"
+manifest = root / "app/src/main/AndroidManifest.xml"
 
 # MEDIUM = 504x896; LOW = 360x640. Both use 24 fps and HEVC.
 # Only the STREAM quality is reduced: photo capture remains a separate operation.
@@ -40,6 +41,9 @@ replace_once(
     'applicationId = "com.meta.wearable.dat.externalsampleapps.cameraaccess"',
     'applicationId = "dev.luigihuss.metaglasses.optimized"',
 )
+
+# Distinguish the optimized app from the original Camera Access on the launcher.
+replace_once(manifest, 'android:label="@string/app_name"', 'android:label="Meta Glasses LOW24"')
 
 # A source revision that changes framing or recording must be reviewed separately.
 checks = {
