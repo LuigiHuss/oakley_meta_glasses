@@ -56,28 +56,50 @@ shutil.copy2(local / "unified-app/MediaArchive.kt", src / "camera/MediaArchive.k
 # Photos/videos in stock CameraAccess are transient: persist to Android MediaStore
 # BEFORE showing the sample's share preview or deleting its temporary MP4.
 vm = src / "camera/CameraViewModel.kt"
-exact(vm,
-      "if (bitmap != null) {\n               _uiState.update {",
-      """if (bitmap != null) {
-               val archived = withContext(Dispatchers.IO) {
-                 MediaArchive.savePhoto(getApplication(), bitmap)
-               }
-               if (!archived) {
-                 wearablesViewModel.setRecentError("Foto capturada, mas não foi possível salvá-la na galeria")
-               }
-               _uiState.update {""")
-exact(vm,
-      """is RecordingResult.Completed ->
-           _uiState.update { it.copy(activePreview = CapturePreview.Video(result.uri)) }""",
-      """is RecordingResult.Completed -> {
-           val archived = withContext(Dispatchers.IO) {
-             MediaArchive.saveVideo(getApplication(), result.uri)
-           }
-           if (!archived) {
-             wearablesViewModel.setRecentError("Vídeo capturado, mas não foi possível salvá-lo na galeria")
-           }
-           _uiState.update { it.copy(activePreview = CapturePreview.Video(result.uri)) }
-         }""")
+def regex_once(path: Path, expression: str, replace) -> None:
+    original = path.read_text(encoding="utf-8")
+    updated, count = re.subn(expression, replace, original, count=0, flags=re.MULTILINE)
+    if count != 1:
+        raise RuntimeError(f"{path}: expected one semantic match, got {count}: {expression[:120]!r}")
+    path.write_text(updated, encoding="utf-8")
+    print("Patched semantic camera block:", path.relative_to(root))
+
+# The upstream Kotlin file uses 12/14-space indentation, not the hardcoded 15
+# spaces of the first version. Preserve actual indentation in both patches.
+def patch_photo(match):
+    base, inner = match.group("base"), match.group("inner")
+    return (
+        f"{base}if (bitmap != null) {{\n"
+        f"{inner}val archived = withContext(Dispatchers.IO) {{\n"
+        f"{inner}  MediaArchive.savePhoto(getApplication<Application>(), bitmap)\n"
+        f"{inner}}}\n"
+        f"{inner}if (!archived) {{\n"
+        f"{inner}  wearablesViewModel.setRecentError(\"Foto capturada, mas não foi possível salvá-la na galeria\")\n"
+        f"{inner}}}\n"
+        f"{inner}_uiState.update {{"
+    )
+
+regex_once(vm,
+           r"^(?P<base>[ \t]*)if \(bitmap != null\) \{\n(?P<inner>[ \t]*)_uiState\.update \{",
+           patch_photo)
+
+def patch_video(match):
+    base, inner = match.group("base"), match.group("inner")
+    return (
+        f"{base}is RecordingResult.Completed -> {{\n"
+        f"{inner}val archived = withContext(Dispatchers.IO) {{\n"
+        f"{inner}  MediaArchive.saveVideo(getApplication<Application>(), result.uri)\n"
+        f"{inner}}}\n"
+        f"{inner}if (!archived) {{\n"
+        f"{inner}  wearablesViewModel.setRecentError(\"Vídeo capturado, mas não foi possível salvá-lo na galeria\")\n"
+        f"{inner}}}\n"
+        f"{inner}_uiState.update {{ it.copy(activePreview = CapturePreview.Video(result.uri)) }}\n"
+        f"{base}}}"
+    )
+
+regex_once(vm,
+           r"^(?P<base>[ \t]*)is RecordingResult\.Completed ->\n(?P<inner>[ \t]*)_uiState\.update \{ it\.copy\(activePreview = CapturePreview\.Video\(result\.uri\)\) \}",
+           patch_video)
 
 # Keep the official MainActivity and its cameraaccess:// registration callback.
 # Put a new Home launcher IN THE SAME APK.
