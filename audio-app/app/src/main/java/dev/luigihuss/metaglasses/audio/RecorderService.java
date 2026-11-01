@@ -30,7 +30,8 @@ public final class RecorderService extends Service {
         if (intent == null) return START_NOT_STICKY;
         if (STOP.equals(intent.getAction())) {
             running.set(false);
-            stopSelf();
+            // Keep the foreground service alive until the writer closes the WAV.
+            if (writer == null) stopSelf();
             return START_NOT_STICKY;
         }
         if (!START.equals(intent.getAction()) || running.get()) return START_NOT_STICKY;
