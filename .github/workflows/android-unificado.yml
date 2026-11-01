@@ -29,8 +29,11 @@ jobs:
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
       - name: Buscar CameraAccess oficial da Meta
         run: |
-          git clone --depth 1 https://github.com/facebook/meta-wearables-dat-android.git meta-official
-          echo "Meta upstream commit: $(git -C meta-official rev-parse HEAD)"
+          git init meta-official
+          git -C meta-official remote add origin https://github.com/facebook/meta-wearables-dat-android.git
+          git -C meta-official fetch --depth 1 origin f4371bc9f90249d51eb07d7f8a61e8d829294f16
+          git -C meta-official checkout --detach FETCH_HEAD
+          echo "Meta upstream commit (pinned): $(git -C meta-official rev-parse HEAD)"
       - name: Unificar camera e audio, aplicar salvamento permanente
         run: python3 scripts/build_unified.py meta-official/samples/CameraAccess
       - name: Credenciais de desenvolvimento DAT
