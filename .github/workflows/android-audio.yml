@@ -1,0 +1,45 @@
+name: Android - Meta Glasses Audio v0.1
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "audio-app/**"
+      - ".github/workflows/android-audio.yml"
+permissions:
+  contents: read
+jobs:
+  build-audio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Android SDK
+        uses: android-actions/setup-android@v4
+      - name: Install API 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Build audio-only Android APK
+        working-directory: audio-app
+        run: gradle --no-daemon :app:assembleDebug
+      - name: Prepare APK
+        run: |
+          mkdir -p dist
+          cp audio-app/app/build/outputs/apk/debug/app-debug.apk dist/Meta-Glasses-Audio-v0.1.apk
+          sha256sum dist/Meta-Glasses-Audio-v0.1.apk
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Meta-Glasses-Audio-v0.1-APK
+          path: dist/Meta-Glasses-Audio-v0.1.apk
+          if-no-files-found: error
+          retention-days: 7
