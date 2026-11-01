@@ -95,8 +95,9 @@ public final class RecorderService extends Service {
         }
         recorder.startRecording();
         AudioDeviceInfo routed = recorder.getRoutedDevice();
-        if (!bluetooth(routed)) {
-            Thread.sleep(300);
+        // Bluetooth communication routing may take time to become active.
+        for (int attempt = 0; attempt < 12 && !bluetooth(routed); attempt++) {
+            Thread.sleep(250);
             routed = recorder.getRoutedDevice();
         }
         if (!bluetooth(routed))
