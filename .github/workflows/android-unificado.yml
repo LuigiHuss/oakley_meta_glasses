@@ -1,0 +1,55 @@
+name: Android - Meta Glasses Unificado v0.3
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/android-unificado.yml"
+      - "scripts/build_unified.py"
+      - "unified-app/**"
+      - "audio-app/app/src/main/java/**"
+permissions:
+  contents: read
+jobs:
+  build:
+    name: Compilar APK unificado (camera DAT + audio Bluetooth)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout do projeto privado
+        uses: actions/checkout@v4
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Android SDK
+        uses: android-actions/setup-android@v4
+      - name: Android 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Buscar CameraAccess oficial da Meta
+        run: |
+          git clone --depth 1 https://github.com/facebook/meta-wearables-dat-android.git meta-official
+          echo "Meta upstream commit: $(git -C meta-official rev-parse HEAD)"
+      - name: Unificar camera e audio, aplicar salvamento permanente
+        run: python3 scripts/build_unified.py meta-official/samples/CameraAccess
+      - name: Credenciais de desenvolvimento DAT
+        working-directory: meta-official/samples/CameraAccess
+        run: |
+          printf 'mwdat_application_id=0\nmwdat_client_token=0\n' > local.properties
+          chmod +x gradlew
+      - name: Compilar Android APK de teste
+        working-directory: meta-official/samples/CameraAccess
+        run: ./gradlew --no-daemon --stacktrace :app:assembleDebug
+      - name: Preparar arquivo
+        run: |
+          mkdir -p dist
+          cp meta-official/samples/CameraAccess/app/build/outputs/apk/debug/app-debug.apk dist/Meta-Glasses-Unificado-v0.3.apk
+          sha256sum dist/Meta-Glasses-Unificado-v0.3.apk
+      - name: Enviar APK privado para download
+        uses: actions/upload-artifact@v4
+        with:
+          name: Meta-Glasses-Unificado-v0.3-APK
+          path: dist/Meta-Glasses-Unificado-v0.3.apk
+          retention-days: 7
+          if-no-files-found: error
