@@ -1,0 +1,4 @@
+# Copie para local.properties (o Android Studio cria esse arquivo com o sdk.dir).
+# Em Modo Desenvolvedor do Meta AI, deixe 0. Para distribuir, use os valores do Wearables Developer Center.
+mwdat_application_id=0
+mwdat_client_token=0
