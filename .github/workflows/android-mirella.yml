@@ -9,7 +9,7 @@ on:
       - ".github/workflows/android-mirella.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-mirella:
@@ -50,3 +50,13 @@ jobs:
           path: dist/Mirella-v1.0-teste.apk
           if-no-files-found: error
           retention-days: 7
+
+      - name: Publicar APK em Releases (link direto para o celular)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: mirella-v1.0-teste-${{ github.run_number }}
+          name: Mirella v1.0-teste (build ${{ github.run_number }})
+          prerelease: true
+          files: dist/Mirella-v1.0-teste.apk
+          body: |
+            APK de teste da Mirella. No celular, toque em Mirella-v1.0-teste.apk para baixar e instalar.
